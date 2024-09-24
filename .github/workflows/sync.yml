@@ -1,0 +1,39 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天凌晨 0 点执行
+  push:
+    branches:
+      - master  # 当主分支有变化时也触发同步
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: kody-black/hacktricks
+          ref: master
+
+      - name: Set up Git
+        run: |
+          git config --global user.email "auto@fork.com"
+          git config --global user.name "Auto Fork"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/HackTricks-wiki/hacktricks.git
+          git fetch upstream
+
+      - name: Merge upstream changes
+        run: |
+          if ! git merge upstream/master --allow-unrelated-histories; then
+            echo "Merge conflict detected. Overwriting conflicting files with upstream changes.";
+            git diff --name-only --diff-filter=U | xargs -I {} git checkout upstream/master -- {};
+            git add -A;
+            git commit -m "Resolve merge conflicts by using upstream changes";
+            git push origin master;
+          fi
